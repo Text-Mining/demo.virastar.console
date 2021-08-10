@@ -164,6 +164,15 @@ namespace textmining.demo.virastar.console
         }
 
 
+        /// <summary>
+        /// اعمال تغییرات مورد نظر کاربر بر روی یک عنصر از لیست توکن‌های خروجی
+        /// </summary>
+        /// <remarks>
+        /// ممکن است انجام اصلاح پیشنهاد شده برای یک توکن منجر به حذف چند توکن بعدی شود (مانند ادغام عبارات مرکب) مثلاً: می شود (3 توکن «می»، « » و «شود») => می‌شود (1 توکن «می‌شود»)  ا
+        /// </remarks>
+        /// <param name="tokens"></param>
+        /// <param name="tokenIndex"></param>
+        /// <returns></returns>
         public static List<TokenInfoEdit> ApplyTokensListChangesOnEachOther(List<TokenInfoEdit> tokens, int tokenIndex)
         {
             try
