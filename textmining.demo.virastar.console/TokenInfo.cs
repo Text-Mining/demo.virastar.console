@@ -4,32 +4,9 @@ using System.Linq;
 
 namespace textmining.demo.virastar.console
 {
-    /// <summary>
-    /// نوع اصلاح پیشنهادی ویراستار
-    /// </summary>
-    public enum EditType
-    {
-        /// <summary>
-        /// اصلاح فاصله و نیم‌فاصله‌ها
-        /// </summary>
-        SpaceCorrection,
-        /// <summary>
-        /// اصلاح نویسه‌ها (جایگزین کردن کاراکترهای فارسی استاندارد)ا
-        /// </summary>
-        CharReplace,
-        /// <summary>
-        /// اصلاح غلط‌های املائی
-        /// </summary>
-        SpellCorrection,
-        /// <summary>
-        /// پیشنهاد شکل بهتر واژه
-        /// </summary>
-        WordSuggestion
-    }
+    [Flags]
+    public enum EditType { SpaceCorrection = 1, CharReplace = 2, SpellCorrection = 4, WordSuggestion = 8 } //MergeWithPrev, MergeWithNext,
 
-    /// <summary>
-    /// نوع توکن خروجی ویراستار
-    /// </summary>
     public enum TokenType { FormalWord, Word, Separator, Number, Phone, Email, Web, SocialId, HashTag, HtmlTag, Emoji, Abbreviation, DateTime, English }
 
     /// <summary>
@@ -75,9 +52,6 @@ namespace textmining.demo.virastar.console
     /// <summary>
     /// این کلاس برای نگهداری اطلاعات توکن‌های متن بکار می‌رود
     /// </summary>
-    /// <remarks>
-    /// خروجی ویراستار لیستی از نمونه‌های این کلاس است
-    /// </remarks>
     public class TokenInfo
     {
         public TokenInfo()
@@ -86,11 +60,9 @@ namespace textmining.demo.virastar.console
         }
 
         /// <summary>
-        /// لیست تغییرات اعمال شده روی این توکن. 
+        /// لیست تغییرات اعمال شده روی این توکن
         /// </summary>
-        /// <remarks>
-        /// بهترین (محتمل‌ترین) پیشنهاد در آخر لیست هست و به ترتیب به سمت ابتدای لیست گزینه‌های پیشنهادی ضعیفتر قرار می‌گیرند
-        /// </remarks>
+        /// <value>The edit list.</value>
         public List<EditItem> EditList { get; set; }
 
         /// <summary>
@@ -130,9 +102,7 @@ namespace textmining.demo.virastar.console
         /// <summary>
         /// شکل جدید (اصلاح شده) توکن براساس تغییرات پیشنهاد شده
         /// </summary>
-        /// <remarks>
-        /// بهترین (محتمل‌ترین) پیشنهاد اصلاح در آخر لیست قرار دارد.
-        /// </remarks>
+        /// <value>The new text.</value>
         public string NewText => EditList == null || EditList.Count == 0
             //|| EditList[EditList.Count - 1].Item2 == null
             ? OriginalText

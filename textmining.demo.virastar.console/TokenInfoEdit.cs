@@ -1,35 +1,76 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using Newtonsoft.Json;
 
 namespace textmining.demo.virastar.console
 {
-    /// <summary>
-    /// این کلاس برای نگهداری اطلاعات اضافی برای رفتار کاربر در قبال هر توکن خروجی ویراستار است
-    /// </summary>
+    public enum ActionType { None, IgnoreManual, IgnoreAll, ApplyManual, ApplyAuto, ApplyAll, AddToDic, AddNewSuggestion };
+
     public class TokenInfoEdit
     {
+        public static readonly Dictionary<string, List<string>> LocalSuggestionList =
+            new Dictionary<string, List<string>>(File.Exists(VirastarConfig.UserSuggestionPath)
+                ? File.ReadAllLines(VirastarConfig.UserSuggestionPath)
+                    .Select(line => line.Split('\t'))
+                    .Where(item => item.Length == 2 && !string.IsNullOrEmpty(item[0]) && !string.IsNullOrEmpty(item[1]))
+                    .GroupBy(w => w[0])
+                    .Select(grp=>new{grp.Key, Val=grp.Select(ww=>ww[1]).ToList()})
+                    .ToDictionary(grp => grp.Key, grp => grp.Val)
+                : new Dictionary<string, List<string>>());
+
+        public void AddToSuggestionList(string key, string suggestion)
+        {
+            if (!Token.EditList.Any(ed => ed.SuggestedText.Equals(suggestion)))
+            {
+                var ed = new EditItem(EditType.WordSuggestion, suggestion, "پیشنهاد کاربر");
+
+                if (!LocalSuggestionList.ContainsKey(key))
+                {
+                    LocalSuggestionList.Add(key, new List<string> { suggestion });
+                    Token.EditList.Add(ed);
+                    ApplyChangeIndex = Token.EditList.Count - 1;
+                    File.AppendAllText(VirastarConfig.UserSuggestionPath, $"{key}\t{suggestion}{Environment.NewLine}");
+                }
+                else if(!LocalSuggestionList[key].Contains(suggestion))
+                {
+                    LocalSuggestionList[key].Add(suggestion);
+                    Token.EditList.Add(ed);
+                    ApplyChangeIndex = Token.EditList.Count - 1;
+                    File.AppendAllText(VirastarConfig.UserSuggestionPath, $"{key}\t{suggestion}{Environment.NewLine}");
+                }
+            }
+        }
+
         public TokenInfoEdit(TokenInfo tokenInfo)
         {
             Token = tokenInfo;
+            if (LocalSuggestionList.ContainsKey(tokenInfo.RefineText))
+            {
+                for (int i = 0; i < LocalSuggestionList[tokenInfo.RefineText].Count; i++)
+                    Token.EditList.Insert(i, new EditItem(
+                        EditType.WordSuggestion, LocalSuggestionList[tokenInfo.RefineText][i], "پیشنهاد کاربر"));
+            }
             ApplyChangeIndex = -1;
             RemoveByOtherTokens = false;
         }
 
-        /// <summary>
-        /// توکن فعلی
-        /// </summary>
         public TokenInfo Token { get; }
 
 
         /// <summary>
-        /// اندیس (انتخاب شده توسط کاربر) در لیست اصلاحات پیشنهادی ویراستار 
-        /// </summary>
-        /// <remarks>
         /// تصمیم‌گیری انجام شده توسط کاربر برای اعمال یا نادیده گرفتن تغییرات پیشنهادی
-        /// </remarks>
+        /// </summary>
         /// <value><c>-1</c> if [ignore to applying changes]; otherwise, <c>index of selected change recommendation (int)</c>.</value>
+        //[JsonIgnore]
         public int ApplyChangeIndex { get; set; }
+
+        /// <summary>
+        /// نوع عکس العمل و انتخاب کاربر در برابر پیشنهادات اصلاح ارائه شده
+        /// </summary>
+        /// <value>The user interaction.</value>
+        public ActionType UserReaction { get; set; } = ActionType.None;
 
         /// <summary>
         /// نشان میدهد که اعمال تغییرات توکن دیگر (قبل یا بعد) باعث حذف این توکن می‌شود
@@ -48,12 +89,40 @@ namespace textmining.demo.virastar.console
                 : Token.EditList[Math.Min(ApplyChangeIndex, Token.EditList.Count - 1)].SuggestedText);
 
         public override string ToString() => Token.ToString();
-        
-        /// <summary>
-        /// اعمال تغییرات مورد نظر کاربر بر روی همه لیست توکن‌های خروجی
-        /// </summary>
-        /// <param name="tokens"></param>
-        /// <returns></returns>
+
+        public string TokenJsonStr() => JsonConvert.SerializeObject(Token);
+
+        public bool IsEqualRecommendation(TokenInfoEdit otherToken)
+        {
+            if (otherToken != null && 
+                Token.OriginalText.Equals(otherToken.Token.OriginalText) &&
+                Token.EditList.Count == otherToken.Token.EditList.Count)
+            {
+                for (int i = 0; i < Token.EditList.Count; i++)
+                    if (!Token.EditList[i].SuggestedText.Equals(otherToken.Token.EditList[i].SuggestedText))
+                        return false;
+
+                return true;
+            }
+
+            return false;
+        }
+
+        public static void AddOriginalTokenToLexicon(string exceptionWord /*, VirastarConfig vsConfig*/)
+        {
+            try
+            {
+                if (!Directory.Exists(Path.GetDirectoryName(VirastarConfig.UserLexiconPath)))
+                    Directory.CreateDirectory(Path.GetDirectoryName(VirastarConfig.UserLexiconPath));
+
+                File.AppendAllText(VirastarConfig.UserLexiconPath, exceptionWord.Trim() + Environment.NewLine);
+            }
+            catch// (Exception ex)
+            {
+                // ignored
+            }
+        }
+
         public static List<TokenInfoEdit> ApplyTokensListChangesOnEachOther(List<TokenInfoEdit> tokens)
         {
             for (int j = 0; j < tokens.Count; j++)
@@ -61,15 +130,6 @@ namespace textmining.demo.virastar.console
             return tokens;
         }
 
-        /// <summary>
-        /// اعمال تغییرات مورد نظر کاربر بر روی یک عنصر از لیست توکن‌های خروجی
-        /// </summary>
-        /// <remarks>
-        /// ممکن است انجام اصلاح پیشنهاد شده برای یک توکن منجر به حذف چند توکن بعدی شود (مانند ادغام عبارات مرکب) مثلاً: می شود (3 توکن «می»، « » و «شود») => می‌شود (1 توکن «می‌شود»)  ا
-        /// </remarks>
-        /// <param name="tokens"></param>
-        /// <param name="tokenIndex"></param>
-        /// <returns></returns>
         public static List<TokenInfoEdit> ApplyTokensListChangesOnEachOther(List<TokenInfoEdit> tokens, int tokenIndex)
         {
             try
@@ -97,12 +157,6 @@ namespace textmining.demo.virastar.console
             return tokens;
         }
         
-        /// <summary>
-        /// بازگشت به عقب در تصمیمات کاربر برای اصلاح یک توکن
-        /// </summary>
-        /// <param name="tokens"></param>
-        /// <param name="tokenIndex"></param>
-        /// <returns></returns>
         public static List<TokenInfoEdit> RollBackEffectOfTokensChangesOnEachOther(List<TokenInfoEdit> tokens, int tokenIndex)
         {
             var token = tokens[tokenIndex];
