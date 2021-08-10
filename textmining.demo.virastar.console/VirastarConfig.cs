@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using Newtonsoft.Json;
@@ -8,12 +7,6 @@ namespace textmining.demo.virastar.console
 {
     public class VirastarConfig
     {
-        private static string AppDataFolder => AppDomain.CurrentDomain.BaseDirectory; //Environment.CurrentDirectory
-
-        public static string UserLexiconPath => Path.Combine(AppDataFolder, "lexicon", "user-ignore.dic");
-        public static string UserSuggestionPath => Path.Combine(AppDataFolder, "lexicon", "user-suggestion.dic");
-        public static string VirastarConfigPath => Path.Combine(AppDataFolder, "conf.json");
-
         public VirastarConfig()
         {
             CharConfiguration = new CharConfig();
@@ -38,20 +31,11 @@ namespace textmining.demo.virastar.console
             IgnoreProcessConfig ignoreProcessConfiguration, 
             SpellConfig spellConfiguration)
         {
-            CharConfiguration = charConfiguration;
-            WordConfiguration = wordConfiguration;
-            WritingRuleConfiguration = writingRuleConfiguration;
-            IgnoreProcessConfiguration = ignoreProcessConfiguration;
-            SpellConfiguration = spellConfiguration;
-        }
-
-        public void FillNullConfig()
-        {
-            CharConfiguration ??= new CharConfig();
-            WordConfiguration ??= new WordConfig();
-            WritingRuleConfiguration ??= new WritingRule();
-            IgnoreProcessConfiguration ??= new IgnoreProcessConfig();
-            SpellConfiguration ??= new SpellConfig();
+            CharConfiguration = charConfiguration ?? new CharConfig();
+            WordConfiguration = wordConfiguration ?? new WordConfig();
+            WritingRuleConfiguration = writingRuleConfiguration ?? new WritingRule();
+            IgnoreProcessConfiguration = ignoreProcessConfiguration ?? new IgnoreProcessConfig();
+            SpellConfiguration = spellConfiguration ?? new SpellConfig();
         }
         
         public void SaveToFile(string filePath)
