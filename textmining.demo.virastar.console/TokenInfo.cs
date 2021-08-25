@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 
 namespace textmining.demo.virastar.console
@@ -9,6 +8,10 @@ namespace textmining.demo.virastar.console
     /// </summary>
     public enum EditType
     {
+        /// <summary>
+        /// بدون تغییر
+        /// </summary>
+        None,
         /// <summary>
         /// اصلاح فاصله و نیم‌فاصله‌ها
         /// </summary>
@@ -136,7 +139,7 @@ namespace textmining.demo.virastar.console
         public string NewText => EditList == null || EditList.Count == 0
             //|| EditList[EditList.Count - 1].Item2 == null
             ? OriginalText
-            : EditList[EditList.Count - 1].SuggestedText; // CandidateTexts[0];
+            : EditList[^1].SuggestedText; // CandidateTexts[0];
 
         /// <summary>
         /// طول (تعداد کاراکترهای) شکل اصلی توکن
